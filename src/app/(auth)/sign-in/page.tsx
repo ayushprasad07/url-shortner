@@ -47,13 +47,13 @@ const SignIn = () => {
     }
   };
   return (
-    <div className="flex h-screen items-center justify-center p-2">
+    <div className="flex min-h-screen items-center justify-center p-2">
         <div className="shadow-input mx-auto w-full max-w-md rounded-none bg-white p-4 md:rounded-2xl md:p-8 dark:bg-black">
             <h2 className="text-2xl font-semibold text-center font-bold text-neutral-800 dark:text-neutral-200">
-                Welcome to Task-Master
+                Welcome to Linkxs
             </h2>
             <p className="mt-2 text-center max-w-sm text-sm text-neutral-600 dark:text-neutral-300">
-                Login to Task-Master
+                Login to Linkxs
             </p>
         
             <form className="my-8" onSubmit={handleSubmit}>

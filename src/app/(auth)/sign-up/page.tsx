@@ -74,10 +74,10 @@ export default function SignupForm() {
     <div className="p-2 flex justify-center items-center min-h-screen">
         <div className="shadow-input mx-auto w-full max-w-md rounded-none bg-white p-4 md:rounded-2xl md:p-8 dark:bg-black overflow-hidden">
         <h2 className="text-2xl text-center font-bold text-neutral-800 dark:text-neutral-200">
-            Welcome to Task-Master
+            Welcome to Linkxs
         </h2>
         <p className="mt-2 max-w-sm text-center text-sm text-neutral-600 dark:text-neutral-300">
-            Login to Task-Master to continue
+            Login to Linkxs to continue
         </p>
 
         <form className="my-8" onSubmit={handleSubmit}>

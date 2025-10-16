@@ -13,6 +13,24 @@ export default async function RedirectPage({
 
   const redirectUrl = await URL.findOne({ stdId: stdid }); 
 
+  if(redirectUrl && new Date()>redirectUrl.expiresAt){
+    redirectUrl.isActive = false;
+    await redirectUrl.save();
+    return (
+      <div style={{ textAlign: "center", padding: "50px" }}>
+        <h2>URL has expired</h2>
+      </div>
+    )
+  }
+
+  if(!redirectUrl.isActive){
+    return (
+      <div style={{ textAlign: "center", padding: "50px" }}>
+        <h2>Contact the host to activate the url</h2>
+      </div>
+    );
+  }
+
   if (redirectUrl && redirectUrl.originalUrl) {
     redirect(redirectUrl.originalUrl);
   }

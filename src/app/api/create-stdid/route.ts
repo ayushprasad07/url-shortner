@@ -1,14 +1,32 @@
 import dbConnect from "@/lib/dbConnect";
 import URL from "@/models/URL";
 import { nanoid } from "nanoid";
+import { getServerSession, User } from "next-auth";
+import { authOptions } from "../auth/[...nextauth]/options";
+import mongoose from "mongoose";
+
 
 // /api/create-stdid
 
 export async function POST(req:Request){
+
+
     dbConnect();
 
+    const session = await getServerSession(authOptions);
+    const user : User = session?.user as User;
+
+    if(!session || !session.user){
+        return Response.json({
+            success:false,
+            message:"Unauthorized"
+        },{status:401})
+    }
+
+    const userId = new mongoose.Types.ObjectId(user._id);
+
     try {
-        const {originalUrl} = await req.json();
+        const {originalUrl,expiresAt} = await req.json();
 
         const existingUrl = await URL.findOne({originalUrl});
         if(existingUrl){
@@ -20,15 +38,17 @@ export async function POST(req:Request){
 
         const stdid = nanoid(6);
 
-        const url = new URL({
+        const url = await  URL.create({
             stdId:stdid,
-            originalUrl
+            originalUrl,
+            userId:userId,
+            isActive:true,
+            expiresAt:expiresAt
         })
 
-        const savedUrl = await url.save();
         return Response.json({
             success:true,
-            data:savedUrl
+            data:url,
         },{status:200})
 
     } catch (error) {

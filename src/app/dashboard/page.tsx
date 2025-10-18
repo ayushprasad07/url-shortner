@@ -32,6 +32,7 @@ export default function URLShortener() {
     linkStdId: string;
   }>({ isOpen: false, linkId: null, linkStdId: "" });
   const [isDeleting, setIsDeleting] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLinks();
@@ -103,6 +104,17 @@ export default function URLShortener() {
   };
 
   const toggleActivity = async (urlId: string) => {
+    // Set loading state for this specific toggle
+    setTogglingId(urlId);
+
+    // Optimistic UI update - immediately update the UI
+    const previousLinks = [...links];
+    setLinks((prevLinks) =>
+      prevLinks.map((link) =>
+        link._id === urlId ? { ...link, isActive: !link.isActive } : link
+      )
+    );
+
     try {
       const response = await fetch(`/api/change-activity/${urlId}`, {
         method: "PUT",
@@ -111,14 +123,23 @@ export default function URLShortener() {
       const data = await response.json();
 
       if (response.ok && data.success) {
+        // Update with actual server response
         setLinks((prevLinks) =>
           prevLinks.map((link) =>
             link._id === urlId ? { ...link, isActive: data.data.isActive } : link
           )
         );
+      } else {
+        // Revert to previous state if API call failed
+        setLinks(previousLinks);
+        console.error("Failed to toggle activity");
       }
     } catch (err) {
+      // Revert to previous state on error
+      setLinks(previousLinks);
       console.error("Error toggling activity:", err);
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -859,11 +880,12 @@ export default function URLShortener() {
                             )}
                           </button>
 
-                          {/* Toggle Switch */}
+                          {/* Toggle Switch with Loading State */}
                           <button
                             onClick={() => toggleActivity(link._id)}
+                            disabled={togglingId === link._id}
                             className={cn(
-                              "relative inline-flex h-9 w-16 flex-shrink-0 cursor-pointer items-center rounded-full border-2 transition-colors duration-300 ease-in-out focus:outline-none focus:ring-4 focus:ring-indigo-500/20 dark:focus:ring-[#48cae4]/20",
+                              "relative inline-flex h-9 w-16 flex-shrink-0 cursor-pointer items-center rounded-full border-2 transition-all duration-200 ease-in-out focus:outline-none focus:ring-4 focus:ring-indigo-500/20 dark:focus:ring-[#48cae4]/20 disabled:cursor-not-allowed disabled:opacity-70",
                               link.isActive
                                 ? "border-emerald-400 bg-gradient-to-r from-emerald-500 to-teal-500"
                                 : "border-neutral-300 bg-neutral-200 dark:border-neutral-600 dark:bg-neutral-700"
@@ -871,12 +893,37 @@ export default function URLShortener() {
                             role="switch"
                             aria-checked={link.isActive}
                           >
-                            <span
-                              className={cn(
-                                "inline-block h-6 w-6 transform rounded-full bg-white shadow-lg ring-0 transition-transform duration-300 ease-in-out",
-                                link.isActive ? "translate-x-8" : "translate-x-1"
-                              )}
-                            />
+                            {togglingId === link._id ? (
+                              <span className="flex h-full w-full items-center justify-center">
+                                <svg
+                                  className="h-4 w-4 animate-spin text-white"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <circle
+                                    className="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    strokeWidth="4"
+                                  />
+                                  <path
+                                    className="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                  />
+                                </svg>
+                              </span>
+                            ) : (
+                              <span
+                                className={cn(
+                                  "inline-block h-6 w-6 transform rounded-full bg-white shadow-lg ring-0 transition-transform duration-200 ease-in-out",
+                                  link.isActive ? "translate-x-8" : "translate-x-1"
+                                )}
+                              />
+                            )}
                           </button>
 
                           {/* Delete Button */}

@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { QRCodeCanvas } from "qrcode.react";
 
 interface URLData {
   _id: string;
@@ -14,12 +13,14 @@ interface URLData {
   expiresAt?: string;
   createdAt: string;
   clicks?: number;
+  qrCode?: string;
 }
 
 export default function URLShortener() {
   const [originalUrl, setOriginalUrl] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [shortenedUrl, setShortenedUrl] = useState("");
+  const [qrCodeData, setQrCodeData] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -33,6 +34,8 @@ export default function URLShortener() {
   }>({ isOpen: false, linkId: null, linkStdId: "" });
   const [isDeleting, setIsDeleting] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [existingUrlInfo, setExistingUrlInfo] = useState<string>("");
+  const [expandedQrId, setExpandedQrId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLinks();
@@ -60,6 +63,8 @@ export default function URLShortener() {
     e.preventDefault();
     setError("");
     setShortenedUrl("");
+    setQrCodeData("");
+    setExistingUrlInfo("");
     setIsLoading(true);
 
     try {
@@ -89,6 +94,22 @@ export default function URLShortener() {
         const baseUrl = window.location.origin;
         const shortUrl = `${baseUrl}/${data.data.stdId}`;
         setShortenedUrl(shortUrl);
+        
+        // Set QR code from backend response
+        if (data.data.qrCode) {
+          setQrCodeData(data.data.qrCode);
+        }
+
+        // Check if this was an existing URL
+        const existingLink = links.find(
+          (link) => link.stdId === data.data.stdId
+        );
+        if (existingLink) {
+          setExistingUrlInfo(
+            "This URL was already shortened. Showing existing short URL."
+          );
+        }
+
         setOriginalUrl("");
         setExpiresAt("");
         fetchLinks();
@@ -104,10 +125,7 @@ export default function URLShortener() {
   };
 
   const toggleActivity = async (urlId: string) => {
-    // Set loading state for this specific toggle
     setTogglingId(urlId);
-
-    // Optimistic UI update - immediately update the UI
     const previousLinks = [...links];
     setLinks((prevLinks) =>
       prevLinks.map((link) =>
@@ -123,19 +141,16 @@ export default function URLShortener() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Update with actual server response
         setLinks((prevLinks) =>
           prevLinks.map((link) =>
             link._id === urlId ? { ...link, isActive: data.data.isActive } : link
           )
         );
       } else {
-        // Revert to previous state if API call failed
         setLinks(previousLinks);
         console.error("Failed to toggle activity");
       }
     } catch (err) {
-      // Revert to previous state on error
       setLinks(previousLinks);
       console.error("Error toggling activity:", err);
     } finally {
@@ -198,14 +213,17 @@ export default function URLShortener() {
     }
   };
 
-  const handleDownloadQR = () => {
-    const canvas = document.querySelector("canvas");
-    if (canvas) {
+  const handleDownloadQR = (qrData: string, stdId: string) => {
+    if (qrData) {
       const link = document.createElement("a");
-      link.download = "qrcode.png";
-      link.href = canvas.toDataURL("image/png");
+      link.download = `qrcode-${stdId}.png`;
+      link.href = qrData;
       link.click();
     }
+  };
+
+  const toggleQrExpanded = (linkId: string) => {
+    setExpandedQrId(expandedQrId === linkId ? null : linkId);
   };
 
   return (
@@ -261,7 +279,6 @@ export default function URLShortener() {
                 </p>
               </div>
             </div>
-
 
             <div className="flex gap-3 border-t border-neutral-200/60 bg-neutral-50/50 px-6 py-4 dark:border-neutral-700/60 dark:bg-neutral-800/30">
               <button
@@ -426,6 +443,30 @@ export default function URLShortener() {
                 </div>
               )}
 
+              {existingUrlInfo && (
+                <div className="animate-in fade-in slide-in-from-top-2 rounded-xl border border-blue-200/60 bg-gradient-to-r from-blue-50/90 to-indigo-50/90 p-4 backdrop-blur-sm dark:border-blue-800/40 dark:from-blue-900/30 dark:to-indigo-900/20">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-500/20 dark:bg-blue-500/30">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 text-blue-600 dark:text-blue-400"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                    <p className="text-sm font-medium text-blue-700 dark:text-blue-400">
+                      {existingUrlInfo}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <button
                 className="group/btn relative block h-12 w-full overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 font-semibold text-white shadow-lg shadow-purple-500/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-purple-500/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 dark:from-[#03045e]/95 dark:via-[#48cae4]/95 dark:to-[#caf0f8]/95 dark:shadow-[#48cae4]/30"
                 type="submit"
@@ -561,67 +602,65 @@ export default function URLShortener() {
                     </p>
                   </div>
 
-                  <div className="rounded-xl border border-neutral-200/60 bg-gradient-to-br from-white/80 to-purple-50/40 p-6 backdrop-blur-sm dark:border-neutral-700/60 dark:from-white/5 dark:to-[#03045e]/20">
-                    <div className="mb-6 flex items-center justify-center gap-2 sm:justify-start">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 shadow-md dark:from-[#03045e]/95 dark:via-[#48cae4]/95 dark:to-[#caf0f8]/95">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4 text-white"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={2}
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
-                          />
-                        </svg>
-                      </div>
-                      <h3 className="text-base font-semibold text-neutral-700 dark:text-neutral-300">
-                        QR Code
-                      </h3>
-                    </div>
-
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="inline-block rounded-xl border-4 border-white bg-white p-4 shadow-lg dark:border-neutral-800">
-                        <QRCodeCanvas value={shortenedUrl} size={140} level="H" />
+                  {qrCodeData && (
+                    <div className="rounded-xl border border-neutral-200/60 bg-gradient-to-br from-white/80 to-purple-50/40 p-6 backdrop-blur-sm dark:border-neutral-700/60 dark:from-white/5 dark:to-[#03045e]/20">
+                      <div className="mb-6 flex items-center justify-center gap-2 sm:justify-start">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 shadow-md dark:from-[#03045e]/95 dark:via-[#48cae4]/95 dark:to-[#caf0f8]/95">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4 text-white"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+                            />
+                          </svg>
+                        </div>
+                        <h3 className="text-base font-semibold text-neutral-700 dark:text-neutral-300">
+                          QR Code
+                        </h3>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={handleDownloadQR}
-                        className="group/qr flex w-full items-center justify-center gap-2 rounded-lg border border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 px-6 py-2.5 text-sm font-semibold text-purple-700 shadow-sm transition-all duration-300 hover:border-purple-300 hover:from-purple-100 hover:to-pink-100 hover:shadow-md dark:border-[#48cae4]/30 dark:from-[#03045e]/50 dark:to-[#48cae4]/20 dark:text-[#caf0f8] dark:hover:border-[#48cae4] dark:hover:from-[#03045e]/70 dark:hover:to-[#48cae4]/30"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4 transition-transform duration-300 group-hover/qr:translate-y-0.5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={2}
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="inline-block rounded-xl border-4 border-white bg-white p-4 shadow-lg dark:border-neutral-800">
+                          <img src={qrCodeData} alt="QR Code" className="h-[140px] w-[140px]" />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadQR(qrCodeData, "new")}
+                          className="group/qr flex w-full items-center justify-center gap-2 rounded-lg border border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 px-6 py-2.5 text-sm font-semibold text-purple-700 shadow-sm transition-all duration-300 hover:border-purple-300 hover:from-purple-100 hover:to-pink-100 hover:shadow-md dark:border-[#48cae4]/30 dark:from-[#03045e]/50 dark:to-[#48cae4]/20 dark:text-[#caf0f8] dark:hover:border-[#48cae4] dark:hover:from-[#03045e]/70 dark:hover:to-[#48cae4]/30"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                          />
-                        </svg>
-                        Download QR Code
-                      </button>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4 transition-transform duration-300 group-hover/qr:translate-y-0.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                            />
+                          </svg>
+                          Download QR Code
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
             </form>
-
-            <p className="mt-8 text-center text-xs text-neutral-500 dark:text-neutral-500">
-              Powered by modern web technologies
-            </p>
           </div>
 
-          <div className="rounded-3xl border border-white/30 bg-white/60 p-6 shadow-2xl shadow-indigo-500/10 backdrop-blur-2xl dark:border-white/10 dark:bg-black/30 dark:shadow-[#48cae4]/20 sm:p-8 lg:p-10">
+          <div className="rounded-3xl border h-full border-white/30 bg-white/60 p-6 shadow-2xl shadow-indigo-500/10 backdrop-blur-2xl dark:border-white/10 dark:bg-black/30 dark:shadow-[#48cae4]/20 sm:p-8 lg:p-10">
             <div className="mb-8 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-lg dark:from-[#03045e]/95 dark:via-[#48cae4]/95 dark:to-[#caf0f8]/95">
@@ -672,7 +711,7 @@ export default function URLShortener() {
               </button>
             </div>
 
-            <div className="max-h-[calc(100vh-280px)] overflow-y-auto pr-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-300 dark:scrollbar-thumb-neutral-700">
+            <div className="max-h-[100vh] overflow-y-auto pr-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-300 dark:scrollbar-thumb-neutral-700">
               {isLoadingLinks ? (
                 <div className="flex items-center justify-center py-16">
                   <div className="flex flex-col items-center gap-4">
@@ -809,6 +848,80 @@ export default function URLShortener() {
                                 year: "numeric",
                               })}
                             </p>
+                          </div>
+                        )}
+
+                        {link.qrCode && (
+                          <button
+                            onClick={() => toggleQrExpanded(link._id)}
+                            className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg border border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 px-4 py-2 text-sm font-semibold text-purple-700 transition-all duration-300 hover:border-purple-300 hover:from-purple-100 hover:to-pink-100 dark:border-[#48cae4]/30 dark:from-[#03045e]/50 dark:to-[#48cae4]/20 dark:text-[#caf0f8] dark:hover:border-[#48cae4]"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+                              />
+                            </svg>
+                            {expandedQrId === link._id ? "Hide QR Code" : "Show QR Code"}
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className={cn(
+                                "h-4 w-4 transition-transform duration-300",
+                                expandedQrId === link._id && "rotate-180"
+                              )}
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M19 9l-7 7-7-7"
+                              />
+                            </svg>
+                          </button>
+                        )}
+
+                        {expandedQrId === link._id && link.qrCode && (
+                          <div className="mb-4 animate-in fade-in slide-in-from-top-2 rounded-lg border border-purple-200/60 bg-gradient-to-br from-purple-50/50 to-pink-50/50 p-4 dark:border-[#48cae4]/30 dark:from-[#03045e]/30 dark:to-[#48cae4]/10">
+                            <div className="flex flex-col items-center gap-3">
+                              <div className="inline-block rounded-lg border-4 border-white bg-white p-3 shadow-md dark:border-neutral-800">
+                                <img
+                                  src={link.qrCode}
+                                  alt={`QR Code for ${link.stdId}`}
+                                  className="h-[120px] w-[120px]"
+                                />
+                              </div>
+                              <button
+                                onClick={() => handleDownloadQR(link.qrCode!, link.stdId)}
+                                className="flex items-center gap-2 rounded-lg border border-purple-200 bg-white px-4 py-2 text-xs font-semibold text-purple-700 transition-all duration-300 hover:border-purple-300 hover:bg-purple-50 dark:border-[#48cae4]/30 dark:bg-neutral-800 dark:text-[#caf0f8] dark:hover:bg-[#03045e]/50"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-3.5 w-3.5"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                  strokeWidth={2}
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                                  />
+                                </svg>
+                                Download QR
+                              </button>
+                            </div>
                           </div>
                         )}
 

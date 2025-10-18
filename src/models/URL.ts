@@ -6,6 +6,7 @@ export interface IURL extends Document {
   userId: mongoose.Types.ObjectId;         
   isActive: boolean;
   expiresAt: Date | null;
+  qrCode?: string;
 }
 
 const urlSchema = new Schema<IURL>(
@@ -15,6 +16,7 @@ const urlSchema = new Schema<IURL>(
     userId: { type: Schema.Types.ObjectId, required: true ,ref:"User"}, 
     isActive: { type: Boolean, default: true,required: true },
     expiresAt: { type: Date, default: null, required: true },
+    qrCode: { type: String, default: null },
   },
   { timestamps: true }
 );

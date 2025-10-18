@@ -4,6 +4,7 @@ import { nanoid } from "nanoid";
 import { getServerSession, User } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/options";
 import mongoose from "mongoose";
+import QRCode from "qrcode";
 
 
 // /api/create-stdid
@@ -37,13 +38,16 @@ export async function POST(req:Request){
         }
 
         const stdid = nanoid(6);
+        const shortUrl = `https://linkxs.vercel.app/${stdid}`;
+        const qrCode = await QRCode.toDataURL(shortUrl);
 
         const url = await  URL.create({
             stdId:stdid,
             originalUrl,
             userId:userId,
             isActive:true,
-            expiresAt:expiresAt
+            expiresAt:expiresAt,
+            qrCode : qrCode
         })
 
         return Response.json({

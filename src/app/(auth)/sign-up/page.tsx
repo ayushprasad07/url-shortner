@@ -71,7 +71,7 @@ export default function SignupForm() {
 
 
   return (
-    <div className="p-2 flex justify-center items-center min-h-screen">
+    <div className="p-2 fixed inset-0 flex items-center justify-center">
         <div className="shadow-input mx-auto w-full max-w-md rounded-none bg-white p-4 md:rounded-2xl md:p-8 dark:bg-black overflow-hidden">
         <h2 className="text-2xl text-center font-bold text-neutral-800 dark:text-neutral-200">
             Welcome to Linkxs

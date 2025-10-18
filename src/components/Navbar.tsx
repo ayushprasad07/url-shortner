@@ -17,11 +17,9 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Main Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Logo */}
             <div className="flex-shrink-0">
               <Link 
                 href="/" 
@@ -31,7 +29,7 @@ export default function Navbar() {
               </Link>
             </div>
 
-            {/* Desktop Navigation */}
+
             <div className="hidden md:flex items-center space-x-2">
               {status === 'loading' ? (
                 <div className="flex items-center gap-2">
@@ -95,7 +93,7 @@ export default function Navbar() {
               )}
             </div>
 
-            {/* Mobile Menu Button */}
+
             <div className="md:hidden">
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -116,9 +114,9 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Menu */}
+
         {isMobileMenuOpen && (
-          <div className="md:hidden bg-white border-t border-gray-200 shadow-lg">
+          <div className="md:hidden absolute top-full left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
             <div className="px-4 py-3 space-y-2">
               {status === 'loading' ? (
                 <div className="space-y-2">
@@ -127,7 +125,6 @@ export default function Navbar() {
                 </div>
               ) : status === 'authenticated' ? (
                 <>
-                  {/* User Info */}
                   <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-lg mb-2">
                     <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold">
                       {session?.user?.name?.charAt(0).toUpperCase() || session?.user?.email?.charAt(0).toUpperCase() || 'U'}
@@ -196,7 +193,6 @@ export default function Navbar() {
         )}
       </nav>
 
-      {/* Spacer to prevent content from being hidden under fixed navbar */}
       <div className="h-16"></div>
     </>
   );

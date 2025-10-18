@@ -8,7 +8,6 @@ export async function POST(req: Request) {
   try {
     const { email, username, password } = await req.json();
 
-    // Check if username already exists
     const existingUserByUsername = await User.findOne({ username });
     if (existingUserByUsername) {
       return Response.json(
@@ -17,7 +16,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if email already exists
     const existingUserByEmail = await User.findOne({ email });
     if (existingUserByEmail) {
       return Response.json(
@@ -26,10 +24,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create new user
     const newUser = new User({
       username,
       email,
